@@ -1306,12 +1306,23 @@ encrypt_ticket(#stateless_ticket{
                   pre_shared_key = PSK,
                   ticket_age_add = TicketAgeAdd,
                   lifetime = Lifetime,
-                  timestamp = Timestamp
+                  timestamp = Timestamp,
+                  certificate_length = CertificateLength,
+                  certificate = Certificate
                  }, Shard, IV) ->
     Plaintext = <<(ssl_cipher:hash_algorithm(Hash)):8,PSK/binary,
                    ?UINT64(TicketAgeAdd),?UINT32(Lifetime),?UINT32(Timestamp)>>,
-    encrypt_ticket_data(Plaintext, Shard, IV).
-
+    case CertificateLength of
+        undefined ->
+            Plaintext2 = <<Plaintext/binary,?UINT16(0)>>,
+            encrypt_ticket_data(Plaintext2, Shard, IV);
+        0 ->
+            Plaintext2 = <<Plaintext/binary,?UINT16(0)>>,
+            encrypt_ticket_data(Plaintext2, Shard, IV);
+        _ ->
+            Plaintext2 = <<Plaintext/binary,?UINT16(CertificateLength),Certificate/binary>>,
+            encrypt_ticket_data(Plaintext2, Shard, IV)
+    end.
 
 decrypt_ticket(CipherFragment, Shard, IV) ->
     case decrypt_ticket_data(CipherFragment, Shard, IV) of
@@ -1321,13 +1332,16 @@ decrypt_ticket(CipherFragment, Shard, IV) ->
             <<?BYTE(HKDF),T/binary>> = Plaintext,
             Hash = hash_algorithm(HKDF),
             HashSize = hash_size(Hash),
-            <<PSK:HashSize/binary,?UINT64(TicketAgeAdd),?UINT32(Lifetime),?UINT32(Timestamp),_/binary>> = T,
+            <<PSK:HashSize/binary,?UINT64(TicketAgeAdd),?UINT32(Lifetime),?UINT32(Timestamp),
+                ?UINT16(CertificateLength),Certificate:CertificateLength/binary,_/binary>> = T,
             #stateless_ticket{
                hash = Hash,
                pre_shared_key = PSK,
                ticket_age_add = TicketAgeAdd,
                lifetime = Lifetime,
-               timestamp = Timestamp
+               timestamp = Timestamp,
+               certificate_length = CertificateLength,
+               certificate = Certificate
               }
     end.
 

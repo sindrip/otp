@@ -1391,15 +1391,15 @@ maybe_send_session_ticket(State, 0) ->
     State;
 maybe_send_session_ticket(#state{connection_states = ConnectionStates,
                                  static_env = #static_env{trackers = Trackers,
-                                                          protocol_cb = Connection}
-                                 
+                                                          protocol_cb = Connection},
+                                session = #session{peer_certificate = PeerCert}
                                 } = State0, N) ->
     Tracker = proplists:get_value(session_tickets_tracker, Trackers),
     #{security_parameters := SecParamsR} =
         ssl_record:current_connection_state(ConnectionStates, read),
     #security_parameters{prf_algorithm = HKDF,
                          resumption_master_secret = RMS} = SecParamsR, 
-    Ticket = tls_server_session_ticket:new(Tracker, HKDF, RMS),
+    Ticket = tls_server_session_ticket:new(Tracker, HKDF, RMS, PeerCert),
     {State, _} = Connection:send_handshake(Ticket, State0),
     maybe_send_session_ticket(State, N - 1).
 

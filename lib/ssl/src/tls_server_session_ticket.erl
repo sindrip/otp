@@ -32,7 +32,7 @@
 
 %% API
 -export([start_link/6,
-         new/3,
+         new/4,
          use/4
         ]).
 
@@ -61,8 +61,8 @@
 start_link(Listner, Mode, Lifetime, TicketStoreSize, MaxEarlyDataSize, AntiReplay) ->
     gen_server:start_link(?MODULE, [Listner, Mode, Lifetime, TicketStoreSize, MaxEarlyDataSize, AntiReplay], []).
 
-new(Pid, Prf, MasterSecret) ->
-    gen_server:call(Pid, {new_session_ticket, Prf, MasterSecret}, infinity).
+new(Pid, Prf, MasterSecret, PeerCert) ->
+    gen_server:call(Pid, {new_session_ticket, Prf, MasterSecret, PeerCert}, infinity).
 
 use(Pid, Identifiers, Prf, HandshakeHist) ->
     gen_server:call(Pid, {use_ticket, Identifiers, Prf, HandshakeHist}, 
@@ -81,7 +81,7 @@ init([Listener | Args]) ->
 
 -spec handle_call(Request :: term(), From :: {pid(), term()}, State :: term()) ->
                          {reply, Reply :: term(), NewState :: term()} .
-handle_call({new_session_ticket, Prf, MasterSecret}, _From, 
+handle_call({new_session_ticket, Prf, MasterSecret, _PeerCert}, _From, 
             #state{nonce = Nonce, 
                    lifetime = LifeTime,
                    max_early_data_size = MaxEarlyDataSize,
@@ -91,12 +91,12 @@ handle_call({new_session_ticket, Prf, MasterSecret}, _From,
     SessionTicket = new_session_ticket(Id, Nonce, LifeTime, MaxEarlyDataSize),
     State = stateful_ticket_store(Id, SessionTicket, Prf, PSK, State0),
     {reply, SessionTicket, State};
-handle_call({new_session_ticket, Prf, MasterSecret}, _From, 
+handle_call({new_session_ticket, Prf, MasterSecret, PeerCert}, _From, 
             #state{nonce = Nonce, 
                    stateless = #{}} = State) -> 
     BaseSessionTicket = new_session_ticket_base(State),
     SessionTicket = generate_stateless_ticket(BaseSessionTicket, Prf, 
-                                              MasterSecret, State),
+                                              MasterSecret, State, PeerCert),
     {reply, SessionTicket, State#state{nonce = Nonce+1}};
 handle_call({use_ticket, Identifiers, Prf, HandshakeHist}, _From, 
             #state{stateful = #{}} = State0) -> 
@@ -323,18 +323,34 @@ stateful_psk_ticket_id(Key) ->
 generate_stateless_ticket(#new_session_ticket{ticket_nonce = Nonce, 
                                               ticket_age_add = TicketAgeAdd,
                                               ticket_lifetime = Lifetime} 
-                         = Ticket, Prf, MasterSecret, 
+                         = Ticket, Prf, MasterSecret, PeerCert, 
                          #state{stateless = #{seed := {IV, Shard}}}) ->
     PSK = tls_v1:pre_shared_key(MasterSecret, Nonce, Prf),
     Timestamp = erlang:system_time(second),
-    Encrypted = ssl_cipher:encrypt_ticket(#stateless_ticket{
-                                             hash = Prf,
-                                             pre_shared_key = PSK,
-                                             ticket_age_add = TicketAgeAdd,
-                                             lifetime = Lifetime,
-                                             timestamp = Timestamp
+    case PeerCert of
+        undefined ->
+            Encrypted = ssl_cipher:encrypt_ticket(#stateless_ticket{
+                                            hash = Prf,
+                                            pre_shared_key = PSK,
+                                            ticket_age_add = TicketAgeAdd,
+                                            lifetime = Lifetime,
+                                            timestamp = Timestamp,
+                                            certificate_length = undefined,
+                                            certificate = undefined
                                             }, Shard, IV),
-    Ticket#new_session_ticket{ticket = Encrypted}.
+            Ticket#new_session_ticket{ticket = Encrypted};
+        _ ->
+            Encrypted = ssl_cipher:encrypt_ticket(#stateless_ticket{
+                                            hash = Prf,
+                                            pre_shared_key = PSK,
+                                            ticket_age_add = TicketAgeAdd,
+                                            lifetime = Lifetime,
+                                            timestamp = Timestamp,
+                                            certificate_length = byte_size(PeerCert),
+                                            certificate = PeerCert
+                                            }, Shard, IV),
+            Ticket#new_session_ticket{ticket = Encrypted}
+    end.
 
 stateless_use(#offered_psks{
                  identities = Identities,

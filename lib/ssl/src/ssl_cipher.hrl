@@ -34,7 +34,9 @@
          pre_shared_key,
          ticket_age_add,
          lifetime,
-         timestamp
+         timestamp,
+		 certificate_length,
+		 certificate
         }).
 
 %%% SSL cipher protocol  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
