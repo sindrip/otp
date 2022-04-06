@@ -327,6 +327,7 @@ generate_stateless_ticket(#new_session_ticket{ticket_nonce = Nonce,
                          #state{stateless = #{seed := {IV, Shard}}}) ->
     PSK = tls_v1:pre_shared_key(MasterSecret, Nonce, Prf),
     Timestamp = erlang:system_time(second),
+    logger:info("Cert to put in ticket: ", #{ meta => PeerCert }),
     case PeerCert of
         undefined ->
             Encrypted = ssl_cipher:encrypt_ticket(#stateless_ticket{
