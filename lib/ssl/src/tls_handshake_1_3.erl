@@ -1308,22 +1308,26 @@ session_resumption({#state{ssl_options = #{session_tickets := Tickets}} = State,
     {ok, {State, negotiated}};
 session_resumption({#state{ssl_options = #{session_tickets := Tickets},
                            handshake_env = #handshake_env{
-                                              early_data_accepted = false}} = State0, negotiated}, PSK)
+                                              early_data_accepted = false}} = State0, negotiated}, PSK0)
   when Tickets =/= disabled ->
     State = handle_resumption(State0, ok),
-    {ok, {State, negotiated, PSK}};
+    {Index, PSK, PeerCert} = PSK0,
+    PSK1 = {Index, PSK},
+    {ok, {State, negotiated, PSK1}};
 session_resumption({#state{ssl_options = #{session_tickets := Tickets},
                            handshake_env = #handshake_env{
                                               early_data_accepted = true}} = State0, negotiated}, PSK0)
   when Tickets =/= disabled ->
     State1 = handle_resumption(State0, ok),
     %% TODO Refactor PSK-tuple {Index, PSK}, index might not be needed.
-    {_ , PSK} = PSK0,
+    {Index, PSK, PeerCert} = PSK0,
+    PSK1 = {Index, PSK},
     State2 = calculate_client_early_traffic_secret(State1, PSK),
     %% Set 0-RTT traffic keys for reading early_data
     State3 = ssl_record:step_encryption_state_read(State2),
-    State = update_current_read(State3, true, true),
-    {ok, {State, negotiated, PSK0}}.
+    State4 = store_peer_cert(State3, PeerCert),
+    State = update_current_read(State4, true, true),
+    {ok, {State, negotiated, PSK1}}.
 
 %% Session resumption with early_data
 maybe_send_certificate_request(#state{
@@ -1516,6 +1520,9 @@ validate_certificate_chain(CertEntries, CertDbHandle, CertDbRef,
                             ocsp_state => OcspState,
                             ocsp_responder_certs => OcspResponderCerts}).
 
+store_peer_cert(#state{session = Session,
+                       handshake_env = HsEnv} = State, PeerCert) ->
+    State#state{session = Session#session{peer_certificate = PeerCert}}.
 
 store_peer_cert(#state{session = Session,
                        handshake_env = HsEnv} = State, PeerCert, PublicKeyInfo) ->

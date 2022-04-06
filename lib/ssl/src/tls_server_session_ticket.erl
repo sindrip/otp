@@ -368,11 +368,12 @@ stateless_use([#psk_identity{identity = Encrypted,
                                    window := Window}} = State) ->
     case ssl_cipher:decrypt_ticket(Encrypted, Shard, IV) of
         #stateless_ticket{hash = Prf,
-                          pre_shared_key = PSK} = Ticket ->
+                          pre_shared_key = PSK,
+                          certificate = PeerCert} = Ticket ->
             case stateless_usable_ticket(Ticket, ObfAge, Binder,
                                         HandshakeHist, Window) of
                 true ->
-                    stateless_anti_replay(Index, PSK, Binder, State);
+                    stateless_anti_replay(Index, PSK, Binder, PeerCert, State);
                 false ->
                     stateless_use(Ids, Binders, Prf, HandshakeHist, 
                                   Index+1, State);
@@ -411,7 +412,7 @@ in_window(_, undefined) ->
 in_window(Age, Window) when is_integer(Window) ->
     Age =< Window.
 
-stateless_anti_replay(Index, PSK, Binder, 
+stateless_anti_replay(Index, PSK, Binder, PeerCert,
                       #state{stateless = #{bloom_filter := BloomFilter0} 
                              = Stateless} = State) ->
     case tls_bloom_filter:contains(BloomFilter0, Binder) of
@@ -420,8 +421,8 @@ stateless_anti_replay(Index, PSK, Binder,
             {{ok, undefined}, State};
         false ->
             BloomFilter = tls_bloom_filter:add_elem(BloomFilter0, Binder),
-            {{ok, {Index, PSK}},
+            {{ok, {Index, PSK, PeerCert}},
              State#state{stateless = Stateless#{bloom_filter => BloomFilter}}}
     end;
-stateless_anti_replay(Index, PSK, _, State) ->
-     {{ok, {Index, PSK}}, State}.
+stateless_anti_replay(Index, PSK, _, PeerCert, State) ->
+     {{ok, {Index, PSK, PeerCert}}, State}.
