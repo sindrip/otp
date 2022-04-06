@@ -1311,7 +1311,7 @@ session_resumption({#state{ssl_options = #{session_tickets := Tickets},
                                               early_data_accepted = false}} = State0, negotiated}, PSK0)
   when Tickets =/= disabled ->
     State = handle_resumption(State0, ok),
-    {Index, PSK, PeerCert} = PSK0,
+    {Index, PSK, _} = PSK0,
     PSK1 = {Index, PSK},
     {ok, {State, negotiated, PSK1}};
 session_resumption({#state{ssl_options = #{session_tickets := Tickets},
@@ -1520,8 +1520,7 @@ validate_certificate_chain(CertEntries, CertDbHandle, CertDbRef,
                             ocsp_state => OcspState,
                             ocsp_responder_certs => OcspResponderCerts}).
 
-store_peer_cert(#state{session = Session,
-                       handshake_env = HsEnv} = State, PeerCert) ->
+store_peer_cert(#state{session = Session} = State, PeerCert) ->
     State#state{session = Session#session{peer_certificate = PeerCert}}.
 
 store_peer_cert(#state{session = Session,
