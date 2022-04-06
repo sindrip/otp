@@ -150,8 +150,7 @@ format_status(_Opt, Status) ->
 
 inital_state([stateless, Lifetime, _, MaxEarlyDataSize, undefined]) ->
     #state{nonce = 0,
-           stateless = #{seed => {crypto:strong_rand_bytes(16), 
-                                  crypto:strong_rand_bytes(32)},
+           stateless = #{seed => ssl_config:get_session_ticket_iv_shard(),
                          window => undefined},
            lifetime = Lifetime,
            max_early_data_size = MaxEarlyDataSize
@@ -160,8 +159,7 @@ inital_state([stateless, Lifetime, _, MaxEarlyDataSize, {Window, K, M}]) ->
     erlang:send_after(Window * 1000, self(), rotate_bloom_filters),
     #state{nonce = 0,
            stateless = #{bloom_filter => tls_bloom_filter:new(K, M),
-                         seed => {crypto:strong_rand_bytes(16),
-                                  crypto:strong_rand_bytes(32)},
+                         seed => ssl_config:get_session_ticket_iv_shard(),
                          window => Window},
            lifetime = Lifetime,
            max_early_data_size = MaxEarlyDataSize

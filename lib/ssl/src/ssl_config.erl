@@ -34,7 +34,8 @@
          get_ticket_lifetime/0,
          get_ticket_store_size/0,
          get_internal_active_n/0,
-         get_internal_active_n/1
+         get_internal_active_n/1,
+         get_session_ticket_iv_shard/0
         ]).
 
 %%====================================================================
@@ -107,6 +108,16 @@ get_internal_active_n(false) ->
             N;
          _  ->
             ?INTERNAL_ACTIVE_N
+    end.
+
+get_session_ticket_iv_shard() ->
+    case {application:get_env(ssl, server_session_ticket_iv),
+          application:get_env(ssl, server_session_ticket_shard)} of
+        {{ok, IV}, {ok, Shard}} when is_binary(IV) andalso bit_size(IV) == 128 andalso
+                                     is_binary(Shard) andalso bit_size(Shard) == 256 ->
+            {IV, Shard};
+        _ ->
+            {crypto:strong_rand_bytes(16), crypto:strong_rand_bytes(32)}
     end.
 
 %%====================================================================
