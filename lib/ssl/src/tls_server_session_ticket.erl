@@ -96,7 +96,7 @@ handle_call({new_session_ticket, Prf, MasterSecret, PeerCert}, _From,
                    stateless = #{}} = State) -> 
     BaseSessionTicket = new_session_ticket_base(State),
     SessionTicket = generate_stateless_ticket(BaseSessionTicket, Prf, 
-                                              MasterSecret, State, PeerCert),
+                                              MasterSecret, PeerCert, State),
     {reply, SessionTicket, State#state{nonce = Nonce+1}};
 handle_call({use_ticket, Identifiers, Prf, HandshakeHist}, _From, 
             #state{stateful = #{}} = State0) -> 
