@@ -1334,7 +1334,7 @@ decrypt_ticket(CipherFragment, Shard, IV) ->
             HashSize = hash_size(Hash),
             <<PSK:HashSize/binary,?UINT64(TicketAgeAdd),?UINT32(Lifetime),?UINT32(Timestamp),
                 ?UINT16(CertificateLength),Certificate:CertificateLength/binary,_/binary>> = T,
-            #stateless_ticket{
+            Ticket = #stateless_ticket{
                hash = Hash,
                pre_shared_key = PSK,
                ticket_age_add = TicketAgeAdd,
@@ -1342,7 +1342,9 @@ decrypt_ticket(CipherFragment, Shard, IV) ->
                timestamp = Timestamp,
                certificate_length = CertificateLength,
                certificate = Certificate
-              }
+              },
+            logger:info("~p~n", [Ticket]),
+            Ticket
     end.
 
 
