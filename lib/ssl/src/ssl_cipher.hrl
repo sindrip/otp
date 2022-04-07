@@ -35,8 +35,7 @@
          ticket_age_add,
          lifetime,
          timestamp,
-		 certificate_length,
-		 certificate
+         certificate
         }).
 
 %%% SSL cipher protocol  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

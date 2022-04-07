@@ -1307,20 +1307,21 @@ encrypt_ticket(#stateless_ticket{
                   ticket_age_add = TicketAgeAdd,
                   lifetime = Lifetime,
                   timestamp = Timestamp,
-                  certificate_length = CertificateLength,
                   certificate = Certificate
                  }, Shard, IV) ->
-    Plaintext = <<(ssl_cipher:hash_algorithm(Hash)):8,PSK/binary,
+    Plaintext1 = <<(ssl_cipher:hash_algorithm(Hash)):8,PSK/binary,
                    ?UINT64(TicketAgeAdd),?UINT32(Lifetime),?UINT32(Timestamp)>>,
+    CertificateLength = 
+        case Certificate of
+            undefined -> 0;
+            _ -> byte_size(Certificate)
+    end,
     case CertificateLength of
-        undefined ->
-            Plaintext2 = <<Plaintext/binary,?UINT16(0)>>,
-            encrypt_ticket_data(Plaintext2, Shard, IV);
         0 ->
-            Plaintext2 = <<Plaintext/binary,?UINT16(0)>>,
+            Plaintext2 = <<Plaintext1/binary,?UINT16(0)>>,
             encrypt_ticket_data(Plaintext2, Shard, IV);
-        _ ->
-            Plaintext2 = <<Plaintext/binary,?UINT16(CertificateLength),Certificate/binary>>,
+        _ -> 
+            Plaintext2 = <<Plaintext1/binary,?UINT16(CertificateLength),Certificate/binary>>,
             encrypt_ticket_data(Plaintext2, Shard, IV)
     end.
 
@@ -1340,7 +1341,6 @@ decrypt_ticket(CipherFragment, Shard, IV) ->
                ticket_age_add = TicketAgeAdd,
                lifetime = Lifetime,
                timestamp = Timestamp,
-               certificate_length = CertificateLength,
                certificate = Certificate
               },
             logger:info("~p~n", [Ticket]),

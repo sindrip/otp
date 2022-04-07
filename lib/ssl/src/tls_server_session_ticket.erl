@@ -328,30 +328,15 @@ generate_stateless_ticket(#new_session_ticket{ticket_nonce = Nonce,
     PSK = tls_v1:pre_shared_key(MasterSecret, Nonce, Prf),
     Timestamp = erlang:system_time(second),
     logger:info("Cert to put in ticket: ~s", [PeerCert]),
-    case PeerCert of
-        undefined ->
-            Encrypted = ssl_cipher:encrypt_ticket(#stateless_ticket{
-                                            hash = Prf,
-                                            pre_shared_key = PSK,
-                                            ticket_age_add = TicketAgeAdd,
-                                            lifetime = Lifetime,
-                                            timestamp = Timestamp,
-                                            certificate_length = undefined,
-                                            certificate = undefined
-                                            }, Shard, IV),
-            Ticket#new_session_ticket{ticket = Encrypted};
-        _ ->
-            Encrypted = ssl_cipher:encrypt_ticket(#stateless_ticket{
-                                            hash = Prf,
-                                            pre_shared_key = PSK,
-                                            ticket_age_add = TicketAgeAdd,
-                                            lifetime = Lifetime,
-                                            timestamp = Timestamp,
-                                            certificate_length = byte_size(PeerCert),
-                                            certificate = PeerCert
-                                            }, Shard, IV),
-            Ticket#new_session_ticket{ticket = Encrypted}
-    end.
+    Encrypted = ssl_cipher:encrypt_ticket(#stateless_ticket{
+                                    hash = Prf,
+                                    pre_shared_key = PSK,
+                                    ticket_age_add = TicketAgeAdd,
+                                    lifetime = Lifetime,
+                                    timestamp = Timestamp,
+                                    certificate = PeerCert
+                                    }, Shard, IV),
+    Ticket#new_session_ticket{ticket = Encrypted}.
 
 stateless_use(#offered_psks{
                  identities = Identities,
