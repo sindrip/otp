@@ -1310,8 +1310,9 @@ session_resumption({#state{ssl_options = #{session_tickets := Tickets},
                            handshake_env = #handshake_env{
                                               early_data_accepted = false}} = State0, negotiated}, PSK0)
   when Tickets =/= disabled ->
-    State = handle_resumption(State0, ok),
-    {Index, PSK, _} = PSK0,
+    State1 = handle_resumption(State0, ok),
+    {Index, PSK, PeerCert} = PSK0,
+    State = store_peer_cert(State1, PeerCert),
     PSK1 = {Index, PSK},
     {ok, {State, negotiated, PSK1}};
 session_resumption({#state{ssl_options = #{session_tickets := Tickets},
