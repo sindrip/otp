@@ -81,7 +81,7 @@ init([Listener | Args]) ->
 
 -spec handle_call(Request :: term(), From :: {pid(), term()}, State :: term()) ->
                          {reply, Reply :: term(), NewState :: term()} .
-handle_call({new_session_ticket, Prf, MasterSecret, _PeerCert}, _From, 
+handle_call({new_session_ticket, Prf, MasterSecret, _}, _From,
             #state{nonce = Nonce, 
                    lifetime = LifeTime,
                    max_early_data_size = MaxEarlyDataSize,
