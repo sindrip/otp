@@ -385,9 +385,10 @@ stateless_living_ticket(0, _, _, _, _) ->
 stateless_living_ticket(ObfAge, TicketAgeAdd, Lifetime, Timestamp, Window) ->
     ReportedAge = ObfAge - TicketAgeAdd,
     RealAge = erlang:system_time(second) - Timestamp,
+    DriftTime = abs(RealAge - (ReportedAge / 1000)),
     (ReportedAge =< Lifetime * 1000)
         andalso (RealAge =< Lifetime)
-        andalso (in_window(RealAge - ReportedAge, Window)).
+        andalso (in_window(DriftTime, Window)).
         
 in_window(_, undefined) ->
     true;
