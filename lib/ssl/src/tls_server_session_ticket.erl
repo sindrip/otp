@@ -387,7 +387,7 @@ stateless_living_ticket(ObfAge, TicketAgeAdd, Lifetime, Timestamp, Window) ->
     RealAge = erlang:system_time(second) - Timestamp,
     (ReportedAge =< Lifetime * 1000)
         andalso (RealAge =< Lifetime)
-        andalso (in_window(RealAge, Window)).
+        andalso (in_window(RealAge - ReportedAge, Window)).
         
 in_window(_, undefined) ->
     true;
